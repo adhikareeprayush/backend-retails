@@ -436,6 +436,6 @@ npm run dev
 
 # Start production server
 npm start
-
-For more information, visit the [API Documentation](http://localhost:5000/api/docs) when the server is running.
 ```
+For more information, visit the [API Documentation](http://localhost:5000/api/docs) when the server is running.
+
