@@ -1,3 +1,5 @@
 DESIGN.md
 .env
 node_modules/
+logs/
+.husky/
