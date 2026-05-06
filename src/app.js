@@ -27,17 +27,30 @@ import logger from "./utils/logger.js";
 import swaggerSpec from "./config/swagger.js";
 import swaggerUi from "swagger-ui-express";
 import { corsDynamicOrigin } from "./config/cors.config.js";
+import connectDB from "./config/database.js";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const publicDir = path.join(__dirname, "..", "public");
 
 /**
- * Build Express app (no DB connect, no listen). Used by server.js and Vercel.
+ * Build Express app (no listen). Local entry connects DB in server.js; Vercel gates DB here.
  */
 export function buildApp() {
   const app = express();
 
   app.set("trust proxy", 1);
+
+  if (process.env.VERCEL) {
+    const dbPromise = connectDB();
+    app.use(async (req, res, next) => {
+      try {
+        await dbPromise;
+        next();
+      } catch (err) {
+        next(err);
+      }
+    });
+  }
 
   const limiter = rateLimit({
     windowMs: parseInt(process.env.RATE_LIMIT_WINDOW_MS, 10) || 15 * 60 * 1000,
@@ -89,7 +102,10 @@ export function buildApp() {
     res.redirect(302, "/api/docs/");
   });
 
-  app.use(express.static(publicDir));
+  // On Vercel, files under public/ are served by the CDN; express.static is ignored there anyway.
+  if (!process.env.VERCEL) {
+    app.use(express.static(publicDir));
+  }
 
   const serveOpenApi = (req, res) => {
     res.set("Cache-Control", "public, max-age=120");
@@ -133,5 +149,3 @@ export function buildApp() {
 
   return app;
 }
-
-export default buildApp;

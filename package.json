@@ -2,11 +2,11 @@
   "name": "backend-mart",
   "version": "1.0.0",
   "description": "Backend API for Mart Management System",
-  "main": "server.js",
+  "main": "src/server.js",
   "type": "module",
   "scripts": {
-    "start": "node server.js",
-    "dev": "nodemon server.js",
+    "start": "node src/server.js",
+    "dev": "nodemon src/server.js",
     "test": "NODE_OPTIONS=--experimental-vm-modules NODE_ENV=test jest",
     "test:watch": "NODE_OPTIONS=--experimental-vm-modules NODE_ENV=test jest --watch"
   },
@@ -40,7 +40,6 @@
     "morgan": "^1.10.0",
     "multer": "^1.4.5-lts.1",
     "nodemailer": "^6.9.7",
-    "serverless-http": "^4.0.0",
     "swagger-jsdoc": "^6.2.8",
     "swagger-ui-express": "^5.0.0",
     "winston": "^3.11.0"
