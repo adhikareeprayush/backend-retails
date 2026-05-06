@@ -1,5 +1,8 @@
 # Backend Mart API 🏪
 
+<img width="1915" height="1074" alt="image" src="https://github.com/user-attachments/assets/ce1be426-cf77-414f-b027-5b1e132fb9e1" />
+
+
 A comprehensive, multi-tenant mart management system API built with Node.js, Express, and MongoDB. This backend provides a complete solution for managing retail operations including inventory, sales, customers, and reporting.
 
 ## 🚀 Features
