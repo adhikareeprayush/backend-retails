@@ -100,11 +100,11 @@ const jsdocOptions = {
   ],
 };
 
-function buildSwaggerSpec() {
+function generateSwaggerSpecOnce() {
   try {
     return swaggerJsdoc(jsdocOptions);
   } catch (err) {
-    console.error("[swagger-jsdoc] startup failed, using minimal OpenAPI:", err.message);
+    console.error("[swagger-jsdoc] generation failed, using minimal OpenAPI:", err.message);
     return {
       openapi: definition.openapi,
       info: definition.info,
@@ -117,6 +117,11 @@ function buildSwaggerSpec() {
   }
 }
 
-const swaggerSpec = buildSwaggerSpec();
-
-export default swaggerSpec;
+/** Lazy OpenAPI (first call builds — matches lms-backend cold-start pattern). */
+let specsCache = null;
+export function buildOpenApiSpecs() {
+  if (!specsCache) {
+    specsCache = generateSwaggerSpecOnce();
+  }
+  return specsCache;
+}

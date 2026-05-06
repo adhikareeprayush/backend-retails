@@ -9,7 +9,11 @@ import logger from "./utils/logger.js";
 
 const app = buildApp();
 
-if (!process.env.VERCEL) {
+const isServerlessRuntime = Boolean(
+  process.env.VERCEL || process.env.AWS_LAMBDA_FUNCTION_NAME
+);
+
+if (!isServerlessRuntime) {
   connectDB();
 
   const PORT = process.env.PORT || 5000;
