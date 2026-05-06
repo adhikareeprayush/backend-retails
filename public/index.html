@@ -1,0 +1,163 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Backend Mart API</title>
+    <style>
+      :root {
+        color-scheme: dark light;
+        --bg: #0f1419;
+        --card: #1a2332;
+        --accent: #3d8bfd;
+        --text: #e8eef7;
+        --muted: #8b9cb3;
+        --warn: #f5a623;
+      }
+      * {
+        box-sizing: border-box;
+      }
+      body {
+        margin: 0;
+        font-family: system-ui, "Segoe UI", Roboto, sans-serif;
+        background: radial-gradient(1200px 600px at 20% -10%, #1e3a5f33, transparent),
+          var(--bg);
+        color: var(--text);
+        min-height: 100vh;
+        line-height: 1.55;
+      }
+      main {
+        max-width: 720px;
+        margin: 0 auto;
+        padding: 3rem 1.25rem 4rem;
+      }
+      h1 {
+        font-size: clamp(1.75rem, 5vw, 2.25rem);
+        font-weight: 700;
+        letter-spacing: -0.02em;
+        margin-bottom: 0.35rem;
+      }
+      .lead {
+        color: var(--muted);
+        font-size: 1.05rem;
+        margin: 0 0 2rem;
+      }
+      .cards {
+        display: grid;
+        gap: 1rem;
+      }
+      .card {
+        background: var(--card);
+        border-radius: 12px;
+        padding: 1.25rem 1.35rem;
+        border: 1px solid #ffffff14;
+      }
+      .card h2 {
+        margin: 0 0 0.6rem;
+        font-size: 1rem;
+        font-weight: 600;
+      }
+      .card p {
+        margin: 0;
+        color: var(--muted);
+        font-size: 0.95rem;
+      }
+      a {
+        color: var(--accent);
+        text-decoration: none;
+      }
+      a:hover {
+        text-decoration: underline;
+      }
+      ul {
+        margin: 0.75rem 0 0;
+        padding-left: 1.2rem;
+        color: var(--muted);
+        font-size: 0.95rem;
+      }
+      .banner {
+        background: #f5a62322;
+        border: 1px solid var(--warn);
+        border-radius: 10px;
+        padding: 1rem 1.15rem;
+        margin-bottom: 1.5rem;
+        color: #fcefd4;
+        font-size: 0.92rem;
+      }
+      code {
+        font-size: 0.85em;
+        background: #00000044;
+        padding: 0.15rem 0.45rem;
+        border-radius: 6px;
+      }
+      footer {
+        margin-top: 2.5rem;
+        font-size: 0.85rem;
+        color: var(--muted);
+      }
+    </style>
+  </head>
+  <body>
+    <main>
+      <h1>Backend Mart API</h1>
+      <p class="lead">
+        Retail inventory and mart management HTTP API. Use the links below for interactive docs or testing tools.
+      </p>
+
+      <div class="banner">
+        <strong>Live deployment:</strong> Email-related features (SMTP password reset, notifications, etc.) are
+        <strong>not configured</strong> and will not work in production unless you add credentials.
+      </div>
+
+      <div class="cards">
+        <div class="card">
+          <h2>OpenAPI (Swagger UI)</h2>
+          <p>Browse every route and schema in your browser.</p>
+          <ul>
+            <li><a href="/api/docs">Swagger UI →</a></li>
+            <li><a href="/openapi.json">Raw OpenAPI JSON →</a> <span style="color: var(--muted); font-size: 0.85em">(also <code>/api/openapi.json</code>)</span></li>
+          </ul>
+        </div>
+
+        <div class="card">
+          <h2>Try the API</h2>
+          <p>
+            Run the Streamlit tester locally or deploy it with Streamlit Community Cloud so anyone can explore endpoints from the browser.
+          </p>
+          <ul>
+            <li>
+              Local:
+              <code>pip install -r streamlit_app/requirements.txt && streamlit run streamlit_app/app.py</code>
+            </li>
+            <li>Set “API base URL” inside the app to this deployment’s URL (e.g. <code id="origin-example"></code>).</li>
+          </ul>
+        </div>
+
+        <div class="card">
+          <h2>Health</h2>
+          <p>Operational check for monitors and load balancers.</p>
+          <ul>
+            <li><a href="/health"><code>GET /health</code></a></li>
+            <li><a href="/api"><code>GET /api</code></a> — API metadata</li>
+          </ul>
+        </div>
+
+        <div class="card">
+          <h2>Browser security (CORS)</h2>
+          <p>
+            Cross-origin requests from arbitrary websites are blocked unless their origin is listed in
+            <code>ALLOWED_ORIGINS</code> (or related env vars). Server-side tools do not send an Origin header and are
+            unaffected by CORS — use rate limits, auth, and secrets for real protection.
+          </p>
+        </div>
+      </div>
+
+      <footer>
+        Backend Mart API · Same-origin apps can call this API without extra CORS configuration when hosted here.
+      </footer>
+    </main>
+    <script>
+      document.getElementById("origin-example").textContent = window.location.origin;
+    </script>
+  </body>
+</html>

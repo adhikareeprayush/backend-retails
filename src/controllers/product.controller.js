@@ -13,7 +13,7 @@ const createProductSchema = Joi.object({
   brand: Joi.string().max(100),
   manufacturer: Joi.string().max(100),
   barcode: Joi.string().max(50),
-  sku: Joi.string().max(50),
+  sku: Joi.string().max(50).required(),
   pricing: Joi.object({
     costPrice: Joi.number().min(0).required(),
     sellingPrice: Joi.number().min(0).required(),
@@ -54,6 +54,53 @@ const createProductSchema = Joi.object({
   tags: Joi.array().items(Joi.string()).default([]),
   isActive: Joi.boolean().default(true),
 });
+
+function documentFromValidatedProduct(value, martId, userId) {
+  const sku = value.sku.trim();
+  const specifications = Object.entries(value.specifications || {}).map(
+    ([name, val]) => ({
+      name,
+      value: String(val),
+    })
+  );
+  const variants = (value.variants || []).map((v, i) => ({
+    name: v.name,
+    value: v.value,
+    sku: v.sku || `${sku}-V${i + 1}`,
+    price: value.pricing.sellingPrice + (v.priceAdjustment || 0),
+    quantity: 0,
+  }));
+
+  return {
+    name: value.name,
+    description: value.description,
+    category: value.category,
+    sku,
+    barcode: value.barcode,
+    mart: martId,
+    brand: value.brand,
+    manufacturer: value.manufacturer,
+    pricing: {
+      cost: value.pricing.costPrice,
+      price: value.pricing.sellingPrice,
+      comparePrice: value.pricing.mrp,
+    },
+    inventory: {
+      unit: value.inventory.unit,
+      quantity: value.inventory.currentStock ?? 0,
+      minStock: value.inventory.minStock ?? 10,
+      maxStock: value.inventory.maxStock ?? 1000,
+      reorderLevel: value.inventory.minStock ?? 10,
+      reserved: 0,
+    },
+    images: value.images || [],
+    tags: value.tags || [],
+    specifications,
+    variants,
+    isActive: value.isActive ?? true,
+    createdBy: userId,
+  };
+}
 
 const updateProductSchema = Joi.object({
   name: Joi.string().min(2).max(200),
@@ -116,10 +163,14 @@ export const createProduct = async (req, res) => {
       return ResponseUtils.error(res, "Category not found", 404);
     }
 
-    // Check for duplicate SKU or barcode within the mart
+    const dupConditions = [{ sku: value.sku.trim() }];
+    if (value.barcode) {
+      dupConditions.push({ barcode: value.barcode });
+    }
+
     const existingProduct = await Product.findOne({
       mart: martId,
-      $or: [{ sku: value.sku }, { barcode: value.barcode }],
+      $or: dupConditions,
     });
 
     if (existingProduct) {
@@ -130,12 +181,9 @@ export const createProduct = async (req, res) => {
       );
     }
 
-    // Create product
-    const product = new Product({
-      ...value,
-      mart: martId,
-      createdBy: req.user.id,
-    });
+    const product = new Product(
+      documentFromValidatedProduct(value, martId, req.user.id)
+    );
 
     await product.save();
 
@@ -172,11 +220,10 @@ export const createProduct = async (req, res) => {
       `Product created: ${product.name} in mart ${martId} by user ${req.user.id}`
     );
 
-    return ResponseUtils.success(
+    return ResponseUtils.created(
       res,
-      product,
       "Product created successfully",
-      201
+      product
     );
   } catch (error) {
     logger.error("Error creating product:", error);
@@ -210,9 +257,9 @@ export const getProducts = async (req, res) => {
     if (brand) filter.brand = new RegExp(brand, "i");
     if (isActive !== undefined) filter.isActive = isActive === "true";
     if (minPrice || maxPrice) {
-      filter["pricing.sellingPrice"] = {};
-      if (minPrice) filter["pricing.sellingPrice"].$gte = parseFloat(minPrice);
-      if (maxPrice) filter["pricing.sellingPrice"].$lte = parseFloat(maxPrice);
+      filter["pricing.price"] = {};
+      if (minPrice) filter["pricing.price"].$gte = parseFloat(minPrice);
+      if (maxPrice) filter["pricing.price"].$lte = parseFloat(maxPrice);
     }
 
     if (search) {
@@ -260,8 +307,8 @@ export const getProducts = async (req, res) => {
 
     return ResponseUtils.success(
       res,
-      products,
-      "Products retrieved successfully"
+      "Products retrieved successfully",
+      products
     );
   } catch (error) {
     logger.error("Error fetching products:", error);
@@ -298,8 +345,8 @@ export const getProductById = async (req, res) => {
 
     return ResponseUtils.success(
       res,
-      response,
-      "Product retrieved successfully"
+      "Product retrieved successfully",
+      response
     );
   } catch (error) {
     logger.error("Error fetching product:", error);
@@ -354,18 +401,40 @@ export const updateProduct = async (req, res) => {
       }
     }
 
-    // Update product
+    if (value.pricing) {
+      if (value.pricing.costPrice != null) {
+        product.pricing.cost = value.pricing.costPrice;
+      }
+      if (value.pricing.sellingPrice != null) {
+        product.pricing.price = value.pricing.sellingPrice;
+      }
+      if (value.pricing.mrp != null) {
+        product.pricing.comparePrice = value.pricing.mrp;
+      }
+      delete value.pricing;
+    }
+
+    if (value.inventory) {
+      const inv = value.inventory;
+      if (inv.unit != null) product.inventory.unit = inv.unit;
+      if (inv.trackInventory != null) product.trackInventory = inv.trackInventory;
+      if (inv.minStock != null) product.inventory.minStock = inv.minStock;
+      if (inv.maxStock != null) product.inventory.maxStock = inv.maxStock;
+      delete value.inventory;
+    }
+
     Object.assign(product, value);
     product.lastModifiedBy = req.user.id;
 
     await product.save();
 
-    // Update inventory if pricing changed
-    if (value.pricing) {
+    if (req.body.pricing) {
+      const costLast =
+        req.body.pricing.costPrice ?? product.pricing.cost;
       await Inventory.findOneAndUpdate(
         { product: product._id, mart: martId },
         {
-          "cost.last": value.pricing.costPrice || product.pricing.costPrice,
+          "cost.last": costLast,
           lastModifiedBy: req.user.id,
         }
       );
@@ -381,7 +450,11 @@ export const updateProduct = async (req, res) => {
       `Product updated: ${product.name} in mart ${martId} by user ${req.user.id}`
     );
 
-    return ResponseUtils.success(res, product, "Product updated successfully");
+    return ResponseUtils.success(
+      res,
+      "Product updated successfully",
+      product
+    );
   } catch (error) {
     logger.error("Error updating product:", error);
     return ResponseUtils.error(res, "Error updating product", 500);
@@ -409,7 +482,11 @@ export const deleteProduct = async (req, res) => {
       `Product deleted: ${product.name} in mart ${martId} by user ${req.user.id}`
     );
 
-    return ResponseUtils.success(res, null, "Product deleted successfully");
+    return ResponseUtils.success(
+      res,
+      "Product deleted successfully",
+      null
+    );
   } catch (error) {
     logger.error("Error deleting product:", error);
     return ResponseUtils.error(res, "Error deleting product", 500);
@@ -461,11 +538,10 @@ export const bulkUpdateProducts = async (req, res) => {
       `Bulk update completed in mart ${martId} by user ${req.user.id}: ${results.length} success, ${errors.length} errors`
     );
 
-    return ResponseUtils.success(
-      res,
-      { results, errors },
-      "Bulk update completed"
-    );
+    return ResponseUtils.success(res, "Bulk update completed", {
+      results,
+      errors,
+    });
   } catch (error) {
     logger.error("Error in bulk update:", error);
     return ResponseUtils.error(res, "Error in bulk update", 500);
@@ -488,8 +564,8 @@ export const getProductAnalytics = async (req, res) => {
           activeProducts: {
             $sum: { $cond: [{ $eq: ["$isActive", true] }, 1, 0] },
           },
-          avgPrice: { $avg: "$pricing.sellingPrice" },
-          totalValue: { $sum: "$pricing.sellingPrice" },
+          avgPrice: { $avg: "$pricing.price" },
+          totalValue: { $sum: "$pricing.price" },
           categories: { $addToSet: "$category" },
         },
       },
@@ -519,8 +595,8 @@ export const getProductAnalytics = async (req, res) => {
 
     return ResponseUtils.success(
       res,
-      result,
-      "Product analytics retrieved successfully"
+      "Product analytics retrieved successfully",
+      result
     );
   } catch (error) {
     logger.error("Error fetching product analytics:", error);

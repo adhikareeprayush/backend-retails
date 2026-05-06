@@ -119,8 +119,8 @@ export const createBill = async (req, res) => {
         productName: product.name,
         productCode: product.sku || product.barcode || product._id.toString(),
         category: product.category,
-        unit: product.inventory.unit,
-        costPrice: product.pricing.costPrice,
+        unit: product.inventory?.unit || "pcs",
+        costPrice: product.pricing.cost,
         tax: {
           rate: product.tax?.rate || 0,
           amount: 0, // Will be calculated
@@ -281,7 +281,7 @@ export const getBills = async (req, res) => {
 
     const bills = await Bill.paginate(filter, options);
 
-    return ResponseUtils.success(res, bills, "Bills retrieved successfully");
+    return ResponseUtils.success(res, "Bills retrieved successfully", bills);
   } catch (error) {
     logger.error("Error fetching bills:", error);
     return ResponseUtils.error(res, "Error fetching bills", 500);

@@ -1,5 +1,17 @@
 import swaggerJsdoc from "swagger-jsdoc";
 
+function resolveApiServerBase() {
+  if (process.env.API_PUBLIC_URL) {
+    return `${process.env.API_PUBLIC_URL.replace(/\/$/, "")}/api/v1`;
+  }
+  if (process.env.VERCEL_URL) {
+    const host = process.env.VERCEL_URL.replace(/^https?:\/\//, "");
+    return `https://${host}/api/v1`;
+  }
+  const port = process.env.PORT || 5000;
+  return `http://localhost:${port}/api/v1`;
+}
+
 const options = {
   definition: {
     openapi: "3.0.0",
@@ -19,14 +31,11 @@ const options = {
     },
     servers: [
       {
-        url:
-          process.env.NODE_ENV === "production"
-            ? "https://your-production-domain.com/api/v1"
-            : `http://localhost:${process.env.PORT || 5000}/api/v1`,
+        url: resolveApiServerBase(),
         description:
           process.env.NODE_ENV === "production"
-            ? "Production server"
-            : "Development server",
+            ? "Configured via API_PUBLIC_URL, VERCEL_URL, or PORT"
+            : "Local development",
       },
     ],
     tags: [

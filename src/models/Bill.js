@@ -1,4 +1,5 @@
 import mongoose from "mongoose";
+import mongoosePaginate from "mongoose-paginate-v2";
 
 const billItemSchema = new mongoose.Schema({
   product: {
@@ -405,5 +406,7 @@ billSchema.index({ mart: 1, "payment.dueDate": 1 });
 billSchema.index({ mart: 1, createdAt: -1 });
 billSchema.index({ "customerInfo.phone": 1 });
 billSchema.index({ tags: 1 });
+
+billSchema.plugin(mongoosePaginate);
 
 export default mongoose.model("Bill", billSchema);

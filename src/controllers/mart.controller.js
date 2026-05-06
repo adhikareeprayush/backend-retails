@@ -4,6 +4,15 @@ import User from "../models/User.js";
 import ResponseUtils from "../utils/responseUtils.js";
 import logger from "../utils/logger.js";
 
+const refIdString = (ref) => {
+  if (!ref) return "";
+  if (typeof ref === "object" && ref._id) return ref._id.toString();
+  return ref.toString();
+};
+
+const userReqIdString = (user) =>
+  user._id ? user._id.toString() : String(user.id);
+
 // Validation schemas
 const createMartSchema = Joi.object({
   name: Joi.string().min(2).max(100).required(),
@@ -215,7 +224,7 @@ export const createMart = async (req, res) => {
 
     logger.info(`Mart created: ${mart.name} by user ${req.user.id}`);
 
-    return ResponseUtils.success(res, mart, "Mart created successfully", 201);
+    return ResponseUtils.created(res, "Mart created successfully", mart);
   } catch (error) {
     logger.error("Error creating mart:", error);
     return ResponseUtils.error(res, "Error creating mart", 500);
@@ -258,15 +267,12 @@ export const getMarts = async (req, res) => {
       page: parseInt(page),
       limit: parseInt(limit),
       sort,
-      populate: [
-        { path: "owner", select: "name email" },
-        { path: "createdBy", select: "name email" },
-      ],
+      populate: [{ path: "owner", select: "name email" }],
     };
 
     const marts = await Mart.paginate(filter, options);
 
-    return ResponseUtils.success(res, marts, "Marts retrieved successfully");
+    return ResponseUtils.success(res, "Marts retrieved successfully", marts);
   } catch (error) {
     logger.error("Error fetching marts:", error);
     return ResponseUtils.error(res, "Error fetching marts", 500);
@@ -282,23 +288,22 @@ export const getMartById = async (req, res) => {
 
     const mart = await Mart.findById(id)
       .populate("owner", "name email")
-      .populate("staff.user", "name email")
-      .populate("createdBy", "name email");
+      .populate("staff.user", "name email");
 
     if (!mart) {
       return ResponseUtils.error(res, "Mart not found", 404);
     }
 
-    // Check permissions - admin can see all, mart_owner can see own, staff can see their mart
+    const uid = userReqIdString(req.user);
     if (
       req.user.role !== "admin" &&
-      mart.owner.toString() !== req.user.id &&
-      !mart.staff.some((s) => s.user.toString() === req.user.id)
+      refIdString(mart.owner) !== uid &&
+      !mart.staff.some((s) => refIdString(s.user) === uid)
     ) {
       return ResponseUtils.error(res, "Access denied", 403);
     }
 
-    return ResponseUtils.success(res, mart, "Mart retrieved successfully");
+    return ResponseUtils.success(res, "Mart retrieved successfully", mart);
   } catch (error) {
     logger.error("Error fetching mart:", error);
     return ResponseUtils.error(res, "Error fetching mart", 500);
@@ -323,8 +328,10 @@ export const updateMart = async (req, res) => {
       return ResponseUtils.error(res, "Mart not found", 404);
     }
 
-    // Check permissions - admin can update all, mart_owner can update own
-    if (req.user.role !== "admin" && mart.owner.toString() !== req.user.id) {
+    if (
+      req.user.role !== "admin" &&
+      refIdString(mart.owner) !== userReqIdString(req.user)
+    ) {
       return ResponseUtils.error(res, "Access denied", 403);
     }
 
@@ -336,7 +343,7 @@ export const updateMart = async (req, res) => {
 
     logger.info(`Mart updated: ${mart.name} by user ${req.user.id}`);
 
-    return ResponseUtils.success(res, mart, "Mart updated successfully");
+    return ResponseUtils.success(res, "Mart updated successfully", mart);
   } catch (error) {
     logger.error("Error updating mart:", error);
     return ResponseUtils.error(res, "Error updating mart", 500);
@@ -362,7 +369,7 @@ export const deleteMart = async (req, res) => {
 
     logger.info(`Mart deleted: ${mart.name} by user ${req.user.id}`);
 
-    return ResponseUtils.success(res, null, "Mart deleted successfully");
+    return ResponseUtils.success(res, "Mart deleted successfully", null);
   } catch (error) {
     logger.error("Error deleting mart:", error);
     return ResponseUtils.error(res, "Error deleting mart", 500);
@@ -374,15 +381,16 @@ export const deleteMart = async (req, res) => {
  */
 export const getMyMart = async (req, res) => {
   try {
-    const mart = await Mart.findOne({ owner: req.user.id })
-      .populate("staff.user", "name email")
-      .populate("createdBy", "name email");
+    const mart = await Mart.findOne({ owner: req.user.id }).populate(
+      "staff.user",
+      "name email"
+    );
 
     if (!mart) {
       return ResponseUtils.error(res, "No mart found for this user", 404);
     }
 
-    return ResponseUtils.success(res, mart, "Mart retrieved successfully");
+    return ResponseUtils.success(res, "Mart retrieved successfully", mart);
   } catch (error) {
     logger.error("Error fetching user mart:", error);
     return ResponseUtils.error(res, "Error fetching mart", 500);
@@ -402,8 +410,10 @@ export const addStaff = async (req, res) => {
       return ResponseUtils.error(res, "Mart not found", 404);
     }
 
-    // Check permissions
-    if (req.user.role !== "admin" && mart.owner.toString() !== req.user.id) {
+    if (
+      req.user.role !== "admin" &&
+      refIdString(mart.owner) !== userReqIdString(req.user)
+    ) {
       return ResponseUtils.error(res, "Access denied", 403);
     }
 
@@ -431,7 +441,7 @@ export const addStaff = async (req, res) => {
 
     logger.info(`Staff added to mart ${mart.name}: ${user.name}`);
 
-    return ResponseUtils.success(res, mart.staff, "Staff added successfully");
+    return ResponseUtils.success(res, "Staff added successfully", mart.staff);
   } catch (error) {
     logger.error("Error adding staff:", error);
     return ResponseUtils.error(res, "Error adding staff", 500);
@@ -450,8 +460,10 @@ export const removeStaff = async (req, res) => {
       return ResponseUtils.error(res, "Mart not found", 404);
     }
 
-    // Check permissions
-    if (req.user.role !== "admin" && mart.owner.toString() !== req.user.id) {
+    if (
+      req.user.role !== "admin" &&
+      refIdString(mart.owner) !== userReqIdString(req.user)
+    ) {
       return ResponseUtils.error(res, "Access denied", 403);
     }
 
@@ -461,7 +473,7 @@ export const removeStaff = async (req, res) => {
 
     logger.info(`Staff removed from mart ${mart.name}`);
 
-    return ResponseUtils.success(res, mart.staff, "Staff removed successfully");
+    return ResponseUtils.success(res, "Staff removed successfully", mart.staff);
   } catch (error) {
     logger.error("Error removing staff:", error);
     return ResponseUtils.error(res, "Error removing staff", 500);

@@ -1,4 +1,5 @@
 import mongoose from "mongoose";
+import mongoosePaginate from "mongoose-paginate-v2";
 
 const customerSchema = new mongoose.Schema(
   {
@@ -280,5 +281,7 @@ customerSchema.index({ mart: 1, "purchase.totalSpent": -1 });
 customerSchema.index({ mart: 1, "purchase.lastPurchaseDate": -1 });
 customerSchema.index({ tags: 1 });
 customerSchema.index({ createdAt: -1 });
+
+customerSchema.plugin(mongoosePaginate);
 
 export default mongoose.model("Customer", customerSchema);

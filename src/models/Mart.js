@@ -1,4 +1,5 @@
 import mongoose from "mongoose";
+import mongoosePaginate from "mongoose-paginate-v2";
 
 const martSchema = new mongoose.Schema(
   {
@@ -191,5 +192,7 @@ martSchema.index({ owner: 1 });
 martSchema.index({ "address.city": 1 });
 martSchema.index({ isActive: 1 });
 martSchema.index({ createdAt: -1 });
+
+martSchema.plugin(mongoosePaginate);
 
 export default mongoose.model("Mart", martSchema);

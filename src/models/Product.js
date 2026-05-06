@@ -1,4 +1,5 @@
 import mongoose from "mongoose";
+import mongoosePaginate from "mongoose-paginate-v2";
 
 const productSchema = new mongoose.Schema(
   {
@@ -12,6 +13,16 @@ const productSchema = new mongoose.Schema(
     description: {
       type: String,
       maxlength: [1000, "Description cannot be more than 1000 characters"],
+    },
+    brand: {
+      type: String,
+      trim: true,
+      maxlength: [100, "Brand cannot be more than 100 characters"],
+    },
+    manufacturer: {
+      type: String,
+      trim: true,
+      maxlength: [100, "Manufacturer cannot be more than 100 characters"],
     },
     slug: {
       type: String,
@@ -65,6 +76,11 @@ const productSchema = new mongoose.Schema(
       },
     },
     inventory: {
+      unit: {
+        type: String,
+        trim: true,
+        default: "pcs",
+      },
       quantity: {
         type: Number,
         required: [true, "Please add quantity"],
@@ -285,5 +301,7 @@ productSchema.index({ "inventory.quantity": 1 });
 productSchema.index({ "pricing.price": 1 });
 productSchema.index({ tags: 1 });
 productSchema.index({ createdAt: -1 });
+
+productSchema.plugin(mongoosePaginate);
 
 export default mongoose.model("Product", productSchema);

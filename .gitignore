@@ -3,3 +3,6 @@ DESIGN.md
 node_modules/
 logs/
 .husky/
+__pycache__/
+*.py[cod]
+.streamlit/secrets.toml

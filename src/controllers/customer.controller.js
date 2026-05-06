@@ -211,8 +211,8 @@ export const getCustomers = async (req, res) => {
 
     return ResponseUtils.success(
       res,
-      customers,
-      "Customers retrieved successfully"
+      "Customers retrieved successfully",
+      customers
     );
   } catch (error) {
     logger.error("Error fetching customers:", error);
