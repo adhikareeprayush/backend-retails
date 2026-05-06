@@ -32,6 +32,18 @@ import connectDB from "./config/database.js";
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const publicDir = path.join(__dirname, "..", "public");
 
+/** Routes that must work without Mongo (health, docs, metadata). */
+function routeSkipsDatabase(reqPath) {
+  return (
+    reqPath === "/health" ||
+    reqPath === "/api" ||
+    reqPath === "/openapi.json" ||
+    reqPath === "/api/openapi.json" ||
+    reqPath.startsWith("/api/docs") ||
+    /^\/api-docs\/?$/i.test(reqPath)
+  );
+}
+
 /**
  * Build Express app (no listen). Local entry connects DB in server.js; Vercel gates DB here.
  */
@@ -41,9 +53,15 @@ export function buildApp() {
   app.set("trust proxy", 1);
 
   if (process.env.VERCEL) {
-    const dbPromise = connectDB();
+    let dbPromise;
     app.use(async (req, res, next) => {
+      if (routeSkipsDatabase(req.path)) {
+        return next();
+      }
       try {
+        if (!dbPromise) {
+          dbPromise = connectDB();
+        }
         await dbPromise;
         next();
       } catch (err) {
